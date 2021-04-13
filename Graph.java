@@ -15,6 +15,7 @@ public class Graph {
 
     /********************************************************************
      * Graph Constructor
+     * ** Converts .txt input to a Graph
      *******************************************************************/
     public Graph(String filename) throws IOException {
         BufferedReader br = new BufferedReader(new FileReader(filename));
@@ -49,6 +50,7 @@ public class Graph {
 
     /********************************************************************
      * Objective Function
+     * ** Calculates the objective value based on inputted integer
      *******************************************************************/
     public int f(int N) {
         return (N * (N - 1)) / 2;
@@ -57,19 +59,28 @@ public class Graph {
 
     /********************************************************************
      * Algorithm 2: Fast vertex removal for CNDP, from Page 7
+     * ** Removes k vertices from the Graph
      *******************************************************************/
     public Graph FastRemoval(int k, Graph G) {
-        Vertex deleted;
+        // Declarations
+        Vertex v;                   // the vertex to be added to the priority queue
+        Vertex deleted;             // the vertex that was most recently deleted from the graph
+        Vertex next;                // the next neighbor of the most recently deleted node that needs to be re-evaluated
+        ArrayList<Vertex> adj;      // list of neighbors of the most recently deleted node
+        int numAdj;                 // size of adj (number of neighbors of deleted node)
+
         Comparator<Vertex> comparator = new Comparator<Vertex>() {
             @Override
             public int compare(Vertex v1, Vertex v2) {
                 return v2.compareTo(v1);
             }
         };
+
+        // Set to be a max queue
         PriorityQueue<Vertex> PQ = new PriorityQueue(vertexCount, comparator);
 
-        // get the vertex with the greatest IMPACT first! Using the first vertex as the root!
-        Vertex v = Evaluate(G, G.vertexArr[0]);
+        // get the vertex with the most IMPACT first
+        v = Evaluate(G, G.vertexArr[0]);
         PQ.add(v);
 
         // repeat until k vertices have been deleted
@@ -82,12 +93,11 @@ public class Graph {
             Arrays.fill(VISITED, false);
 
             // now need to re-Evaluate all neighbors of the deleted node to ensure IMPACT values are updated
-            ArrayList<Vertex> adj = deleted.getEdges();
-            int size = adj.size();
-            Vertex next;
+            adj = deleted.getEdges();
+            numAdj = adj.size();
 
             // for all unvisited neighbors of v, re-run Evaluate
-            for (int j = 0; j < size; j++) {
+            for (int j = 0; j < numAdj; j++) {
                 next = adj.get(j);
                 // only run evaluate again if the neighbor is not deleted or visited
                 if (!next.checkDeleted() && !VISITED[next.getNodeNum()]) {
@@ -97,13 +107,13 @@ public class Graph {
                 }
             }
         }
-
         return G;
     }
 
 
     /********************************************************************
      * Algorithm 3: Evaluate Function, from Appendix A
+     * ** Evaluates IMPACT of nodes in given component, return minimum IMPACT node
      *******************************************************************/
     public Vertex Evaluate(Graph G, Vertex root) {
         // Declarations
@@ -112,6 +122,7 @@ public class Graph {
         int minNode = root.getNodeNum();                // vertex number with min IMPACT to be returned at end of algorithm
         int minVal = f(vertexCount);                    // starting minimum impact value (largest it could be)
         int rootChildren = 0;                           // tracks the number of children that the root has (used to determine if root is AP)
+        int adjCounter;                                 // tracks which adjacent node we have reached
         int DFN[] = new int[vertexCount];               // stores the discovery time of every vertex
         int LOW[] = new int[vertexCount];               // earliest connected vertex (in other words, earliest back edge)
         int PARENT[] = new int[vertexCount];            // stores the parent of each vertex
@@ -121,7 +132,6 @@ public class Graph {
         int ST_SIZE[] = new int[vertexCount];           // stores the subtree size of each vertex
         int IMPACT[] = new int[vertexCount];            // stores the impact on the objective value of removing each vertex, from Eq. 1
 
-        // Begin EVALUATE algorithm
         // Initialize values for root after pushing to Stack
         S.push(root);
         int rootNum = root.getNodeNum();
@@ -141,8 +151,8 @@ public class Graph {
             int numAdj = adj.size();                   // The number of adjacent vertices (neighbors) of v
 
             // Find next unvisited neighbor, y, of v
-            // Could I make this more efficient so its not cycling through more neighbors each time? Probably.
-            int adjCounter = 0;
+            // Could I make this more efficient, so its not cycling through more neighbors each time?
+            adjCounter = 0;
             Vertex y = adj.get(0);
             while (adjCounter < (numAdj - 1) && (VISITED[y.getNodeNum()] || y.checkDeleted())) {
                 adjCounter += 1;
@@ -204,7 +214,7 @@ public class Graph {
             }
         }
 
-        // finish calculating IMPACT -- Should incorporate this back into above loops after verifying correctness
+        // Finish calculating IMPACT -- Is it possible to incorporate this back into above loops?
         COUNTED[root.getNodeNum()] = true;
         for (int i = 0; i < vertexCount; i++) {
             // if deleted node, do not update IMPACT or let it go towards min
@@ -212,6 +222,8 @@ public class Graph {
                 continue;
             }
             // otherwise go ahead and update impact!
+            // (num - 2) rather than (num - 1) because "num" is pre-incremented
+            // essentially, num will always be one greater than the actual number of nodes in the component
             if (CUTPOINT[i]) {
                 IMPACT[i] = IMPACT[i] + f(num - 2 - CUT_SIZE[i]);
             } else {
@@ -235,16 +247,6 @@ public class Graph {
             }
         }
         System.out.println();
-
-        /*
-        // Print low array
-        System.out.print("Low Array: ");
-        for (int i = 0; i < LOW.length; i++) {
-            System.out.print(LOW[i] + " ");
-        }
-
-        System.out.println();
-         */
 
         // Print DFN array
         System.out.print("DFN Array: ");
@@ -281,6 +283,7 @@ public class Graph {
         Graph G = new Graph("adjList(1).txt");
         G.FastRemoval(3, G);
 
+        // DEBUGGING PURPOSES ONLY
         // print which nodes were deleted
         for (int i = 0; i < G.vertexCount; i++) {
             if (G.vertexArr[i].checkDeleted()){
