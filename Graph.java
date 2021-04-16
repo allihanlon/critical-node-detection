@@ -1,3 +1,4 @@
+import java.text.SimpleDateFormat;
 import java.util.*;
 import java.io.*;
 import com.opencsv.CSVWriter;
@@ -279,8 +280,15 @@ public class Graph {
      * Driver
      *******************************************************************/
     public static void main(String args[]) throws IOException {
+        // System time at start of algorithm
+        SimpleDateFormat formatter= new SimpleDateFormat("HH:mm:ss:SS z");
+        System.out.println(formatter.format(System.currentTimeMillis()));
+
         Graph G = new Graph("adjList(1).txt");
         G.FastRemoval(3, G);
         G.SaveOutput("output.csv");
+
+        // System time at end of algorithm
+        System.out.println(formatter.format(System.currentTimeMillis()));
     }
 }
