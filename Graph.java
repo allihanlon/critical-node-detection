@@ -1,5 +1,6 @@
 import java.util.*;
 import java.io.*;
+import com.opencsv.CSVWriter;
 
 /*******************************************************************/
 /********************************************************************
@@ -11,7 +12,7 @@ public class Graph {
     private int vertexCount;        // total number of vertices in the graph
     private Vertex[] vertexArr;     // array of all vertices in the graph
     private boolean[] VISITED;      // denotes whether a vertex has been visited by Evaluate
-
+    private int[] DELETED;          // tracks the deleted nodes, in order of deletion
 
     /********************************************************************
      * Graph Constructor
@@ -34,7 +35,7 @@ public class Graph {
             vertexArr[i] = new Vertex(i);
         }
 
-        // Use BufferedReader and String Tokenizer for input
+        // Use BufferedReader and String Tokenizer to process  input
         while ((currLine = br.readLine()) != null) {
             st = new StringTokenizer(currLine, ": " );
             int currNode = Integer.parseInt(st.nextToken());
@@ -68,41 +69,35 @@ public class Graph {
         Vertex next;                // the next neighbor of the most recently deleted node that needs to be re-evaluated
         ArrayList<Vertex> adj;      // list of neighbors of the most recently deleted node
         int numAdj;                 // size of adj (number of neighbors of deleted node)
+        DELETED = new int[k];       // tracks deleted nodes in order of deletion
 
-        Comparator<Vertex> comparator = new Comparator<Vertex>() {
-            @Override
-            public int compare(Vertex v1, Vertex v2) {
-                return v2.compareTo(v1);
-            }
-        };
-
-        // Set to be a max queue
+        // Create a Comparator to ensure PQ is a Max-PQ
+        Comparator<Vertex> comparator = (v1, v2) -> v2.compareTo(v1);
         PriorityQueue<Vertex> PQ = new PriorityQueue(vertexCount, comparator);
 
-        // get the vertex with the most IMPACT first
+        // Selection first node with minimum IMPACT, using first value as root
         v = Evaluate(G, G.vertexArr[0]);
         PQ.add(v);
 
-        // repeat until k vertices have been deleted
+        // Repeat until k vertices have been deleted
         for (int i = 0; i < k; i++) {
-            // delete the node with the greatest IMPACT on the objective function
+            // Delete the node with the greatest IMPACT on the objective function in the PQ
             deleted = PQ.remove();
             deleted.markDeleted();
+            DELETED[i] = deleted.getNodeNum();
 
-            // now that node has been removed, reset the VISITED array for next pass with Evaluate
+            // Reset the VISITED array for next pass with Evaluate
             Arrays.fill(VISITED, false);
 
-            // now need to re-Evaluate all neighbors of the deleted node to ensure IMPACT values are updated
             adj = deleted.getEdges();
             numAdj = adj.size();
 
-            // for all unvisited neighbors of v, re-run Evaluate
+            // For all unvisited neighbors of v, re-evaluate to ensure IMPACT values are updated
             for (int j = 0; j < numAdj; j++) {
                 next = adj.get(j);
-                // only run evaluate again if the neighbor is not deleted or visited
+                // Only run Evaluate again if the neighbor is not deleted or already visited
                 if (!next.checkDeleted() && !VISITED[next.getNodeNum()]) {
                     v = Evaluate(G, next);
-                    // v only equals null if there are no cut points in that component
                     PQ.add(v);
                 }
             }
@@ -159,7 +154,7 @@ public class Graph {
                 y = adj.get(adjCounter);
             }
 
-            // If there is an unvisited neighbor, then use it! If not, go into the else statement for back-tracing
+            // If there is an unvisited neighbor then push to Stack, Else backtrace
             if (!VISITED[y.getNodeNum()] && !y.checkDeleted()) {
                 // Push and initialize all values
                 S.push(y);
@@ -170,8 +165,7 @@ public class Graph {
                 ST_SIZE[y.getNodeNum()] = 1;
                 IMPACT[y.getNodeNum()] = 0;
                 num += 1;
-                // If the parent of the node is the root, then we increment the number of children the root has
-                // When the root has more than one child in the DFS tree, it is an AP
+                // Track children of the root; When the root has more than one child in DFS tree, it is an AP
                 if (PARENT[y.getNodeNum()] == root.getNodeNum() && !y.equals(root)) {
                     rootChildren++;
                 }
@@ -179,26 +173,24 @@ public class Graph {
                 S.pop();
                 // For all neighbors w of v, do the following:
                 for (int j = 0; j < numAdj; j++) {
-                    // get w and verify that it has not be deleted!
                     Vertex w = adj.get(j);
+                    // Verify that the node has not been deleted
                     if (w.checkDeleted()) {
                         continue;
                     }
-                    // Start back tracing :-)
+                    // Begin back tracing
                     int vertex = v.getNodeNum();
                     int neighbor = w.getNodeNum();
 
                     if (DFN[neighbor] < DFN[vertex] && PARENT[vertex] != neighbor) {
                         LOW[vertex] = Math.min(LOW[vertex], DFN[neighbor]);
-                        // This constraint makes sure that ONLY true back edges are included
                     } else if (PARENT[neighbor] == vertex) {
                         LOW[vertex] = Math.min(LOW[vertex], LOW[neighbor]);
-                        // Update subtree size
                         if (!COUNTED[neighbor] && (PARENT[vertex] != neighbor || v.equals(root))) {
                             COUNTED[neighbor] = true;
                             ST_SIZE[vertex] = ST_SIZE[vertex] + ST_SIZE[neighbor];
                         }
-                        // Mark as articulation point and update cut size
+                        // Mark as AP, update cut size and IMPACT
                         if (LOW[neighbor] >= DFN[vertex] && !v.equals(root)) {
                             CUTPOINT[vertex] = true;
                             CUT_SIZE[vertex] = CUT_SIZE[vertex] + ST_SIZE[neighbor];
@@ -214,65 +206,72 @@ public class Graph {
             }
         }
 
-        // Finish calculating IMPACT -- Is it possible to incorporate this back into above loops?
+        // Finish calculating IMPACT with ancestors
         COUNTED[root.getNodeNum()] = true;
         for (int i = 0; i < vertexCount; i++) {
-            // if deleted node, do not update IMPACT or let it go towards min
+            // if deleted node, do not consider or update IMPACT
             if (vertexArr[i].checkDeleted() || !COUNTED[i]) {
                 continue;
             }
-            // otherwise go ahead and update impact!
-            // (num - 2) rather than (num - 1) because "num" is pre-incremented
-            // essentially, num will always be one greater than the actual number of nodes in the component
+            // The equation below is (num - 2) rather than (num - 1) because "num" is pre-incremented
+            // Essentially, num will always be one greater than the actual number of nodes in the component
             if (CUTPOINT[i]) {
                 IMPACT[i] = IMPACT[i] + f(num - 2 - CUT_SIZE[i]);
             } else {
                 IMPACT[i] = IMPACT[i] + f(num - 2);
             }
-            // maintain if the minimum thus far
+            // Maintain if the minimum thus far
             if (IMPACT[i] < minVal && COUNTED[i]) {
                 minNode = i;
                 minVal = IMPACT[i];
             }
         }
 
-        //////////////////////////
-        // DEBUGGING PURPOSES ONLY
-        //////////////////////////
-        // Print cut points
-        System.out.print("Cut Points: ");
-        for (int i = 0; i < vertexCount; i++) {
-            if (CUTPOINT[i] == true) {
-                System.out.print(i + " ");
-            }
-        }
-        System.out.println();
-
-        // Print DFN array
-        System.out.print("DFN Array: ");
-        for (int i = 0; i < DFN.length; i++) {
-            System.out.print(DFN[i] + " ");
-        }
-
-        System.out.println();
-
-        // Print IMPACT array
-        System.out.print("IMPACT Array: ");
-        for (int i = 0; i < IMPACT.length; i++) {
-            System.out.print(IMPACT[i] + " ");
-        }
-
-        System.out.println();
-        System.out.println("Chosen IMPACT: " + minNode);
-
-        System.out.println();
-
-        //////////////////////////
-        // END DEBUGGING PURPOSES ONLY
-        //////////////////////////
-
         vertexArr[minNode].setIMPACT(IMPACT[minNode]);
         return vertexArr[minNode];
+    }
+
+
+    /********************************************************************
+     * Output
+     * ** Function to output to a CSV file after algorithm completion
+     *******************************************************************/
+    public void SaveOutput(String path) throws IOException {
+        // DECLARATIONS
+        FileWriter writer = new FileWriter(path);       // FileWriter to write to CSV file
+        int len = DELETED.length;                       // Number of deleted nodes
+        int currNode;                                   // Current node to write
+
+        writer.append("Node Number");
+        writer.append(",");
+        writer.append("IMPACT");
+        writer.append("\n");
+
+        // Write all deleted nodes and their IMPACT to a CSV, in order of deletion
+        for (int i = 0; i < len; i++) {
+            currNode = DELETED[i];
+            writer.write(currNode + "");
+            writer.write(",");
+            writer.write(vertexArr[currNode].getIMPACT() + "");
+            writer.write("\n");
+        }
+
+        writer.flush();
+        writer.close();
+    }
+
+
+    /********************************************************************
+     * Debugger
+     * ** Can be called from Evaluate, to print IMPACT, DFN, or full Vertex array
+     *******************************************************************/
+    public void Debugger(int[] arr, String name) {
+        // Print array sent to function:
+        System.out.print(name);
+        for (int i = 0; i < arr.length; i++) {
+            System.out.print(arr[i] + " ");
+        }
+        System.out.println();
     }
 
 
@@ -282,13 +281,6 @@ public class Graph {
     public static void main(String args[]) throws IOException {
         Graph G = new Graph("adjList(1).txt");
         G.FastRemoval(3, G);
-
-        // DEBUGGING PURPOSES ONLY
-        // print which nodes were deleted
-        for (int i = 0; i < G.vertexCount; i++) {
-            if (G.vertexArr[i].checkDeleted()){
-                System.out.print(i + " ");
-            }
-        }
+        G.SaveOutput("output.csv");
     }
 }
