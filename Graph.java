@@ -69,6 +69,7 @@ public class Graph {
         Vertex next;                // the next neighbor of the most recently deleted node that needs to be re-evaluated
         ArrayList<Vertex> adj;      // list of neighbors of the most recently deleted node
         int numAdj;                 // size of adj (number of neighbors of deleted node)
+        long start;               // time at start of Evaluate call
         DELETED = new int[k];       // tracks deleted nodes in order of deletion
 
         // Create a Comparator to ensure PQ is a Max-PQ
@@ -76,7 +77,9 @@ public class Graph {
         PriorityQueue<Vertex> PQ = new PriorityQueue(vertexCount, comparator);
 
         // Selection first node with minimum IMPACT, using first value as root
+        start = System.currentTimeMillis();
         v = Evaluate(G, G.vertexArr[0]);
+        System.out.println(System.currentTimeMillis() - start);
         PQ.add(v);
 
         // Repeat until k vertices have been deleted
@@ -97,7 +100,9 @@ public class Graph {
                 next = adj.get(j);
                 // Only run Evaluate again if the neighbor is not deleted or already visited
                 if (!next.checkDeleted() && !VISITED[next.getNodeNum()]) {
+                    start = System.currentTimeMillis();
                     v = Evaluate(G, next);
+                    System.out.println(System.currentTimeMillis() - start);
                     PQ.add(v);
                 }
             }
@@ -244,18 +249,12 @@ public class Graph {
         int len = DELETED.length;                       // Number of deleted nodes
         int currNode;                                   // Current node to write
 
-        writer.append("Node Number");
-        writer.append(",");
-        writer.append("IMPACT");
-        writer.append("\n");
+        writer.append("Number,Node,IMPACT\n");
 
         // Write all deleted nodes and their IMPACT to a CSV, in order of deletion
         for (int i = 0; i < len; i++) {
             currNode = DELETED[i];
-            writer.write(currNode + "");
-            writer.write(",");
-            writer.write(vertexArr[currNode].getIMPACT() + "");
-            writer.write("\n");
+            writer.write((i + 1) + "," + currNode + "," + vertexArr[currNode].getIMPACT() + "\n");
         }
 
         writer.flush();
@@ -281,15 +280,14 @@ public class Graph {
      * Driver
      *******************************************************************/
     public static void main(String args[]) throws IOException {
-        // System time at start of algorithm
-        SimpleDateFormat formatter= new SimpleDateFormat("HH:mm:ss:SS z");
-        System.out.println(formatter.format(System.currentTimeMillis()));
-
-        Graph G = new Graph("BarabasiAlbert_n5000m1.txt");
-        G.FastRemoval(10, G);
-        G.SaveOutput("output.csv");
-
-        // System time at end of algorithm
-        System.out.println(formatter.format(System.currentTimeMillis()));
+        //if (args.length < 2) {
+            System.out.println("Too few arguments.");
+        //} else {
+            //String filename = args[0];
+            String filename = "BarabasiAlbert_n5000m1.txt";
+            Graph G = new Graph(filename);
+            G.FastRemoval(10, G);
+            G.SaveOutput("output.csv");
+        //}
     }
 }
