@@ -1,7 +1,6 @@
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.io.*;
-import com.opencsv.CSVWriter;
 
 /*******************************************************************/
 /********************************************************************
@@ -63,7 +62,7 @@ public class Graph {
      * Algorithm 2: Fast vertex removal for CNDP, from Page 7
      * ** Removes k vertices from the Graph
      *******************************************************************/
-    public Graph FastRemoval(int k, Graph G) {
+    public void FastRemoval(int k, Graph G) {
         // Declarations
         Vertex v;                   // the vertex to be added to the priority queue
         Vertex deleted;             // the vertex that was most recently deleted from the graph
@@ -103,7 +102,6 @@ public class Graph {
                 }
             }
         }
-        return G;
     }
 
 
@@ -114,19 +112,21 @@ public class Graph {
     public Vertex Evaluate(Graph G, Vertex root) {
         // Declarations
         Stack<Vertex> S = new Stack();
-        int num = 1;                                    // tracks the discovery time of the nodes
-        int minNode = root.getNodeNum();                // vertex number with min IMPACT to be returned at end of algorithm
-        int minVal = f(vertexCount);                    // starting minimum impact value (largest it could be)
-        int rootChildren = 0;                           // tracks the number of children that the root has (used to determine if root is AP)
-        int adjCounter;                                 // tracks which adjacent node we have reached
-        int DFN[] = new int[vertexCount];               // stores the discovery time of every vertex
-        int LOW[] = new int[vertexCount];               // earliest connected vertex (in other words, earliest back edge)
-        int PARENT[] = new int[vertexCount];            // stores the parent of each vertex
-        boolean CUTPOINT[] = new boolean[vertexCount];  // denotes whether a vertex was found to be a cut point
-        boolean COUNTED[] = new boolean[vertexCount];   // denotes whether a vertex's subtrees have been counted towards the objective value
-        int CUT_SIZE[] = new int[vertexCount];          // stores the number of new connected components
-        int ST_SIZE[] = new int[vertexCount];           // stores the subtree size of each vertex
-        int IMPACT[] = new int[vertexCount];            // stores the impact on the objective value of removing each vertex, from Eq. 1
+        int num = 1;                                    // Tracks the discovery time of the nodes
+        int minNode = root.getNodeNum();                // Vertex number with min IMPACT to be returned at end of algorithm
+        int minVal = f(vertexCount);                    // Starting minimum impact value (largest it could be)
+        int rootChildren = 0;                           // Tracks the number of children that the root has (used to determine if root is AP)
+        int adjCounter;                                 // Tracks which adjacent node we have reached
+        int DFN[] = new int[vertexCount];               // Stores the discovery time of every vertex
+        int LOW[] = new int[vertexCount];               // Earliest connected vertex (in other words, earliest back edge)
+        int PARENT[] = new int[vertexCount];            // Stores the parent of each vertex
+        boolean CUTPOINT[] = new boolean[vertexCount];  // Denotes whether a vertex was found to be a cut point
+        boolean COUNTED[] = new boolean[vertexCount];   // Denotes whether a vertex's subtrees have been counted towards the objective value
+        int CUT_SIZE[] = new int[vertexCount];          // Stores the number of new connected components
+        int ST_SIZE[] = new int[vertexCount];           // Stores the subtree size of each vertex
+        int IMPACT[] = new int[vertexCount];            // Stores the impact on the objective value of removing each vertex, from Eq. 1
+        int NEIGHBORS[] = new int[vertexCount];         // Tracks the number of visited neighbors of each node to save computational time
+
 
         // Initialize values for root after pushing to Stack
         S.push(root);
@@ -143,31 +143,33 @@ public class Graph {
         while (!S.empty()) {
             // DECLARATIONS
             Vertex v = S.peek();                       // Get the next vertex in the Stack
+            int vertex = v.getNodeNum();               // Get the node number of this node
+            int currNeighbor;                          // Current neighbor of v
             ArrayList<Vertex> adj = v.getEdges();      // The ArrayList of adjacent vertices (neighbors) of v
             int numAdj = adj.size();                   // The number of adjacent vertices (neighbors) of v
 
             // Find next unvisited neighbor, y, of v
-            // Could I make this more efficient, so its not cycling through more neighbors each time?
-            adjCounter = 0;
-            Vertex y = adj.get(0);
-            while (adjCounter < (numAdj - 1) && (VISITED[y.getNodeNum()] || y.checkDeleted())) {
-                adjCounter += 1;
-                y = adj.get(adjCounter);
+            Vertex y = adj.get(NEIGHBORS[vertex]);
+            while (NEIGHBORS[vertex] < (numAdj - 1) && (VISITED[y.getNodeNum()] || y.checkDeleted())) {
+                NEIGHBORS[vertex] += 1;
+                y = adj.get(NEIGHBORS[vertex]);
             }
+
+            currNeighbor = y.getNodeNum();
 
             // If there is an unvisited neighbor then push to Stack, Else backtrace
             if (!VISITED[y.getNodeNum()] && !y.checkDeleted()) {
                 // Push and initialize all values
                 S.push(y);
-                VISITED[y.getNodeNum()] = true;
-                DFN[y.getNodeNum()] = num;
-                LOW[y.getNodeNum()] = DFN[y.getNodeNum()];
-                PARENT[y.getNodeNum()] = v.getNodeNum();
-                ST_SIZE[y.getNodeNum()] = 1;
-                IMPACT[y.getNodeNum()] = 0;
+                VISITED[currNeighbor] = true;
+                DFN[currNeighbor] = num;
+                LOW[currNeighbor] = DFN[currNeighbor];
+                PARENT[currNeighbor] = vertex;
+                ST_SIZE[currNeighbor] = 1;
+                IMPACT[currNeighbor] = 0;
                 num += 1;
                 // Track children of the root; When the root has more than one child in DFS tree, it is an AP
-                if (PARENT[y.getNodeNum()] == root.getNodeNum() && !y.equals(root)) {
+                if (PARENT[currNeighbor] == root.getNodeNum() && !y.equals(root)) {
                     rootChildren++;
                 }
             } else {
@@ -180,7 +182,6 @@ public class Graph {
                         continue;
                     }
                     // Begin back tracing
-                    int vertex = v.getNodeNum();
                     int neighbor = w.getNodeNum();
 
                     if (DFN[neighbor] < DFN[vertex] && PARENT[vertex] != neighbor) {
@@ -227,7 +228,7 @@ public class Graph {
                 minVal = IMPACT[i];
             }
         }
-
+        // Update IMPACT in Vertex object and return function results
         vertexArr[minNode].setIMPACT(IMPACT[minNode]);
         return vertexArr[minNode];
     }
@@ -284,8 +285,8 @@ public class Graph {
         SimpleDateFormat formatter= new SimpleDateFormat("HH:mm:ss:SS z");
         System.out.println(formatter.format(System.currentTimeMillis()));
 
-        Graph G = new Graph("adjList(1).txt");
-        G.FastRemoval(3, G);
+        Graph G = new Graph("BarabasiAlbert_n5000m1.txt");
+        G.FastRemoval(10, G);
         G.SaveOutput("output.csv");
 
         // System time at end of algorithm
