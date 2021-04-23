@@ -4,13 +4,14 @@ public class Vertex implements Comparable<Vertex> {
     private int nodeNum;                                // Node number, and index of Graph's Vertex array
     private int IMPACT;                                 // IMPACT if removed from its component/graph
     private boolean deleted;                            // Removed from graph marker
-    private ArrayList<Vertex> adj = new ArrayList<>();  // List of adjacent vertices
+    private ArrayList<Vertex> adj;   // List of adjacent vertices
 
     /********************************************************************
      * Constructor & Getters
      * ******************************************************************/
     public Vertex (int nodeNum) {
         this.nodeNum = nodeNum;
+        this.adj = new ArrayList<>();
         deleted = false;
     }
 
@@ -20,7 +21,7 @@ public class Vertex implements Comparable<Vertex> {
 
     public int getIMPACT() { return IMPACT; }
 
-    public ArrayList getEdges(){
+    public ArrayList<Vertex> getEdges(){
         return adj;
     }
 

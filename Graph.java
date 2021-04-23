@@ -74,7 +74,7 @@ public class Graph {
 
         // Create a Comparator to ensure PQ is a Max-PQ
         Comparator<Vertex> comparator = (v1, v2) -> v2.compareTo(v1);
-        PriorityQueue<Vertex> PQ = new PriorityQueue(vertexCount, comparator);
+        PriorityQueue<Vertex> PQ = new PriorityQueue<Vertex>(vertexCount, comparator);
 
         // Selection first node with minimum IMPACT, using first value as root
         start = System.currentTimeMillis();
@@ -116,12 +116,11 @@ public class Graph {
      *******************************************************************/
     public Vertex Evaluate(Graph G, Vertex root) {
         // Declarations
-        Stack<Vertex> S = new Stack();
+        Stack<Vertex> S = new Stack<Vertex>();                  // Declare the Stack
         int num = 1;                                    // Tracks the discovery time of the nodes
         int minNode = root.getNodeNum();                // Vertex number with min IMPACT to be returned at end of algorithm
         int minVal = f(vertexCount);                    // Starting minimum impact value (largest it could be)
         int rootChildren = 0;                           // Tracks the number of children that the root has (used to determine if root is AP)
-        int adjCounter;                                 // Tracks which adjacent node we have reached
         int DFN[] = new int[vertexCount];               // Stores the discovery time of every vertex
         int LOW[] = new int[vertexCount];               // Earliest connected vertex (in other words, earliest back edge)
         int PARENT[] = new int[vertexCount];            // Stores the parent of each vertex
@@ -280,14 +279,14 @@ public class Graph {
      * Driver
      *******************************************************************/
     public static void main(String args[]) throws IOException {
-        //if (args.length < 2) {
+        if (args.length < 2) {
             System.out.println("Too few arguments.");
-        //} else {
-            //String filename = args[0];
-            String filename = "BarabasiAlbert_n5000m1.txt";
+        } else {
+            int k = Integer.parseInt(args[0]);
+            String filename = args[1];
             Graph G = new Graph(filename);
-            G.FastRemoval(10, G);
+            G.FastRemoval(k, G);
             G.SaveOutput("output.csv");
-        //}
+        }
     }
 }
