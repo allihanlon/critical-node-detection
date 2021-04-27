@@ -1,4 +1,3 @@
-import java.text.SimpleDateFormat;
 import java.util.*;
 import java.io.*;
 
@@ -117,7 +116,7 @@ public class Graph {
     public Vertex Evaluate(Graph G, Vertex root) {
         // Declarations
         Stack<Vertex> S = new Stack<Vertex>();                  // Declare the Stack
-        int num = 1;                                    // Tracks the discovery time of the nodes
+        int num = 0;                                    // Tracks the discovery time of the nodes
         int minNode = root.getNodeNum();                // Vertex number with min IMPACT to be returned at end of algorithm
         int minVal = f(vertexCount);                    // Starting minimum impact value (largest it could be)
         int rootChildren = 0;                           // Tracks the number of children that the root has (used to determine if root is AP)
@@ -222,9 +221,9 @@ public class Graph {
             // The equation below is (num - 2) rather than (num - 1) because "num" is pre-incremented
             // Essentially, num will always be one greater than the actual number of nodes in the component
             if (CUTPOINT[i]) {
-                IMPACT[i] = IMPACT[i] + f(num - 2 - CUT_SIZE[i]);
+                IMPACT[i] = IMPACT[i] + f(num - CUT_SIZE[i]);
             } else {
-                IMPACT[i] = IMPACT[i] + f(num - 2);
+                IMPACT[i] = IMPACT[i] + f(num - 1);
             }
             // Maintain if the minimum thus far
             if (IMPACT[i] < minVal && COUNTED[i]) {
